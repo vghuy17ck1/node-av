@@ -7,6 +7,12 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavcodec/bsf.h>
 #include <libavformat/avformat.h>
+#ifdef NODE_AV_SHARED_FFMPEG
+// Shared FFmpeg libraries only export the public API
+#include "nav_get_bits.h"
+static int ff_isom_write_avcc(AVIOContext*, const uint8_t*, int) { return AVERROR(ENOSYS); }
+static int ff_isom_write_hvcc(AVIOContext*, const uint8_t*, int, int, void*) { return AVERROR(ENOSYS); }
+#else
 #include <libavformat/avc.h>
 #include <libavformat/hevc.h>
 
@@ -18,6 +24,7 @@ extern "C" {
 #include <av1.h>
 #include <av1_parse.h>
 #undef register
+#endif
 }
 
 namespace ffmpeg {
@@ -205,6 +212,10 @@ struct ParsedParams {
 
 // Parse H.264 SPS using FFmpeg internal API
 static int parse_h264_sps(const uint8_t* sps_data, int sps_size, ParsedParams* params) {
+#ifdef NODE_AV_SHARED_FFMPEG
+  (void)sps_data; (void)sps_size; (void)params;
+  return AVERROR(ENOSYS);
+#else
   if (sps_size < 4) return -1;
 
   // Skip NAL header (1 byte)
@@ -298,10 +309,15 @@ static int parse_h264_sps(const uint8_t* sps_data, int sps_size, ParsedParams* p
   ff_h264_ps_uninit(&ps);
   avcodec_free_context(&avctx);
   return sps ? 0 : -1;
+#endif
 }
 
 // Parse HEVC/H.265 SPS using FFmpeg internal API
 static int parse_hevc_sps(const uint8_t* sps_data, int sps_size, ParsedParams* params) {
+#ifdef NODE_AV_SHARED_FFMPEG
+  (void)sps_data; (void)sps_size; (void)params;
+  return AVERROR(ENOSYS);
+#else
   if (sps_size < 4) return -1;
 
   // Skip NAL header (2 bytes for HEVC)
@@ -385,6 +401,7 @@ static int parse_hevc_sps(const uint8_t* sps_data, int sps_size, ParsedParams* p
   ff_hevc_ps_uninit(&ps);
   avcodec_free_context(&avctx);
   return sps ? 0 : -1;
+#endif
 }
 
 // Parse VP8 keyframe header

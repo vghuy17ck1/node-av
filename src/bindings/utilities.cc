@@ -20,7 +20,9 @@ extern "C" {
 #include <libavutil/bprint.h>
 #include <libavutil/pixdesc.h>
 #include <libavcodec/avcodec.h>
+#ifndef NODE_AV_SHARED_FFMPEG
 #include <libavformat/internal.h>
+#endif
 }
 
 namespace ffmpeg {
@@ -412,7 +414,11 @@ Napi::Value Utilities::GetCodecString(const Napi::CallbackInfo& info) {
   AVBPrint buf;
   av_bprint_init(&buf, 0, AV_BPRINT_SIZE_AUTOMATIC);
 
+#ifdef NODE_AV_SHARED_FFMPEG
+  int ret = av_mime_codec_str(par, frame_rate_ptr ? *frame_rate_ptr : AVRational{0, 1}, &buf);
+#else
   int ret = ff_make_codec_str(nullptr, par, frame_rate_ptr, &buf);
+#endif
 
   if (ret < 0 || !buf.str) {
     av_bprint_finalize(&buf, nullptr);

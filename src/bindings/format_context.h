@@ -13,8 +13,15 @@
 
 extern "C" {
 #include <libavformat/avformat.h>
+#ifdef NODE_AV_SHARED_FFMPEG
+// Shared FFmpeg libraries do not export ffurl_write, so raw RTSP writes are unsupported
+typedef struct URLContext URLContext;
+#define MAX_URL_SIZE 4096  // from libavformat/internal.h
+static inline int ffurl_write(URLContext*, const unsigned char*, int) { return AVERROR(ENOSYS); }
+#else
 #include <libavformat/url.h>
 #include <libavformat/internal.h>
+#endif
 }
 
 // Platform-specific socket headers for RTSP

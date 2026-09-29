@@ -12,8 +12,9 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
 
-const GYP_FILES = ['binding.gyp', 'binding-jellyfin.gyp', 'binding-msvc.gyp'];
-const PLATFORM_SPECIFIC = /^src\/bindings\/(device_(darwin|linux|win32)|gpu_texture_(darwin|linux|win))\.(cc|mm)$/;
+const GYP_FILES = ['binding.gyp', 'binding-jellyfin.gyp', 'binding-msvc.gyp', 'binding-shared.gyp'];
+const PLATFORM_SPECIFIC =
+  /^src\/bindings\/(device_(darwin|linux|win32)|gpu_texture_(darwin|linux|win))\.(cc|mm)$|^(custom|externals)\/.*sync_queue\.c$/;
 
 function parseGyp(path) {
   const raw = readFileSync(path, 'utf8');
