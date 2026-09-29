@@ -1,0 +1,88 @@
+name: Build
+
+on:
+  push:
+    branches: [custom]
+    paths-ignore: ['**.md', 'docs/**']
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Publish a GitHub release for the package.json version
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: win32-x64, runner: windows-2025 }
+          - { target: linux-x64, runner: ubuntu-22.04 }
+          - { target: linux-arm64, runner: ubuntu-22.04-arm }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install patchelf
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y patchelf
+      - run: npm ci --ignore-scripts
+      - run: bash custom/build.sh "${{ matrix.target }}"
+      - run: bash custom/test.sh "${{ matrix.target }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: binary-${{ matrix.target }}
+          path: artifacts/*.zip
+          if-no-files-found: error
+
+  package:
+    name: Package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: bash custom/pack.sh
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package
+          path: artifacts/*.tgz
+          if-no-files-found: error
+
+  release:
+    name: Release
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release }}
+    needs: [build, package]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+      - run: bash custom/publish-release.sh artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
