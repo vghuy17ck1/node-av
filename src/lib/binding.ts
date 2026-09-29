@@ -373,6 +373,17 @@ function loadBinding(): NativeBinding {
   const platformArch = `${platform}-${arch}`;
   const loadLocal = process.env.AV_FROM_SOURCE === '1';
 
+  // Explicit binary, e.g. a local build next to its FFmpeg libraries
+  const customPath = process.env.NODE_AV_BINARY;
+  if (customPath) {
+    const path = resolve(customPath);
+    try {
+      return require(path);
+    } catch (err) {
+      throw new Error(`NODE_AV_BINARY could not be loaded from ${path}: ${err}`);
+    }
+  }
+
   // Local build directory (--build-from-source)
   try {
     const releasePath = resolve(__dirname, '..', '..', 'build', 'Release', 'node-av.node');
