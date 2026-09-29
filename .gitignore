@@ -84,3 +84,6 @@ ffmpeg_examples
 /electron
 /bin
 /scripts/.options-data
+# Fork build output
+/work
+/artifacts
